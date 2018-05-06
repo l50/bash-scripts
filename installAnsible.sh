@@ -27,7 +27,7 @@ ansibleHosts="$ansibleDirectory/hosts"
 globalRoles="$ansibleDirectory/roles"
 ansibleWorkspace="$HOME/.ansible/Workspace"
 pyenvInstalled=true
-pythonVersion='2.7.13'
+pythonVersion='3.6.5'
 
 ##### (Cosmetic) Color output
 RED="\033[01;31m"      # Issues/Errors
