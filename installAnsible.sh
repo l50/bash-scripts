@@ -50,7 +50,7 @@ installPyenvDeps()
 {
   if [[ `uname` != 'Darwin' ]]; then
     os=`cat /etc/os-release | perl -n -e'while(/^ID=(.*)/g) {print "$1\n"}'`
-    if [[ $os == 'ubuntu' ]]; then
+    if [[ $os == 'ubuntu' || os == 'kali' ]]; then
       installAptDeps
     fi
   fi
