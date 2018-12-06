@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # -----------------------------------------------------------------------------
-# installAnsible.sh
+# install_ansible.sh
 #
-# Install Ansible
+# Install ansible
 #
-# Usage: bash installAnsible.sh
+# Usage: bash install_ansible.sh
 #
 # Author: Jayson Grace, jayson.e.grace@gmail.com, 8/2/2017
 #
@@ -21,23 +21,21 @@
 set -e
 
 os=''
-ansibleDirectory='/etc/ansible'
-ansibleConfigFile="$ansibleDirectory/ansible.cfg"
-ansibleHosts="$ansibleDirectory/hosts"
-globalRoles="$ansibleDirectory/roles"
-ansibleWorkspace="$HOME/.ansible/Workspace"
-pyenvInstalled=true
-pythonVersion='3.6.5'
+ansible_directory='/etc/ansible'
+ansible_config_file="$ansible_directory/ansible.cfg"
+ansible_hosts="$ansible_directory/hosts"
+global_roles="$ansible_directory/roles"
+ansible_workspace="$HOME/.ansible/Workspace"
+pyenv_installed=true
+python_version='3.6.5'
 
 ##### (Cosmetic) Color output
 RED="\033[01;31m"      # Issues/Errors
 GREEN="\033[01;32m"    # Success
-YELLOW="\033[01;33m"   # Warnings/Information
 BLUE="\033[01;34m"     # Heading
-BOLD="\033[01;01m"     # Highlight
 RESET="\033[00m"       # Normal
 
-installAptDeps()
+install_apt_deps()
 {
   echo -e "${BLUE}Making sure all apt dependencies are in place, please wait...${RESET}"
   sudo apt update
@@ -51,7 +49,7 @@ installPyenvDeps()
   if [[ `uname` != 'Darwin' ]]; then
     os=`cat /etc/os-release | perl -n -e'while(/^ID=(.*)/g) {print "$1\n"}'`
     if [[ $os == 'ubuntu' || $os == 'kali' ]]; then
-      installAptDeps
+      install_apt_deps
     fi
   fi
 }
@@ -81,11 +79,11 @@ setDotfileParams()
   fi
 }
 
-installPyenv()
+install_pyenv()
 {
   installPyenvDeps
   if [[ ! -d $HOME/.pyenv ]]; then
-    pyenvInstalled=false
+    pyenv_installed=false
     echo -e "${BLUE}Installing pyenv, please wait...${RESET}"
     curl https://raw.githubusercontent.com/pyenv/pyenv-installer/master/bin/pyenv-installer | bash
     setDotfileParams
@@ -94,122 +92,143 @@ installPyenv()
   fi
 }
 
-installPython()
+install_python()
 {
-  echo -e "${BLUE}Installing Python ${pythonVersion} and setting it globally using pyenv, please wait...${RESET}"
-  if [[ ! -f $HOME/.pyenv/versions/$pythonVersion/bin/python ]]; then
-    $HOME/.pyenv/bin/pyenv install $pythonVersion
-    $HOME/.pyenv/bin/pyenv global $pythonVersion
+  echo -e "${BLUE}Installing python ${python_version} and setting it globally using pyenv, please wait...${RESET}"
+  if [[ ! -f $HOME/.pyenv/versions/$python_version/bin/python ]]; then
+    $HOME/.pyenv/bin/pyenv install $python_version
+    $HOME/.pyenv/bin/pyenv global $python_version
   else
-    echo -e "${GREEN}Python version ${pythonVersion} has already been installed, moving on...${RESET}"
+    echo -e "${GREEN}Python version ${python_version} has already been installed, moving on...${RESET}"
   fi
   if [[ ! -f /usr/bin/python ]]; then
     # Symlink to fix issues with ansible
-    sudo ln -s $HOME/.pyenv/versions/$pythonVersion/bin/python /usr/bin/python
+    sudo ln -s $HOME/.pyenv/versions/$python_version/bin/python /usr/bin/python
   fi
 }
 
-getPip()
+get_pip()
 {
-  if [[ $pyenvInstalled == false ]]; then
+  if [[ $pyenv_installed == false ]]; then
     echo -e "${BLUE}Installing pip, please wait...${RESET}"
     $HOME/.pyenv/shims/easy_install pip
   fi
   echo -e "${BLUE}Making sure we are using the latest version of pip, please wait...${RESET}"
-  $HOME/.pyenv/versions/$pythonVersion/bin/pip install --upgrade pip
+  $HOME/.pyenv/versions/$python_version/bin/pip install --upgrade pip
 }
 
-installAnsible()
+install_ansible()
 {
-  echo -e "${BLUE}Installing Ansible, please wait...${RESET}"
-  $HOME/.pyenv/versions/$pythonVersion/bin/pip install ansible
+  echo -e "${BLUE}Installing ansible, please wait...${RESET}"
+  $HOME/.pyenv/versions/$python_version/bin/pip install ansible
 }
 
-createAnsibleDirectory()
+create_ansible_directory()
 {
-  if [[ ! -d $ansibleDirectory ]]; then
-    sudo mkdir $ansibleDirectory
+  if [[ ! -d $ansible_directory ]]; then
+    sudo mkdir $ansible_directory
     # This will not work on docker because $USER is not defined
-    sudo chown $USER $ansibleDirectory
+    sudo chown $USER $ansible_directory
   else
     echo -e "${GREEN}Ansible directory already created, moving on...${RESET}"
   fi
 }
 
-getAnsibleConfigFile()
+get_ansible_config_file()
 {
-  if [[ ! -f $ansibleConfigFile ]]; then
+  if [[ ! -f $ansible_config_file ]]; then
     echo 'getting config file'
     curl https://raw.githubusercontent.com/ansible/ansible/devel/examples/ansible.cfg\
-      -o $ansibleConfigFile
-    sudo bash -c "echo ansible_python_interpreter = $HOME/.pyenv/versions/$pythonVersion/bin/python >> $ansibleConfigFile"
+      -o $ansible_config_file
+    sudo bash -c "echo ansible_python_interpreter = $HOME/.pyenv/versions/$python_version/bin/python >> $ansible_config_file"
   else
     echo -e "${GREEN}Ansible config file already created, moving on...${RESET}"
   fi
 }
 
-createHostFile()
+modify_ansible_config_file()
 {
-  if [[ ! -f $ansibleHosts ]]; then
-    sudo touch $ansibleHosts
-    # Run playbooks locally
-    echo "localhost ansible_connection=local" | sudo tee $ansibleHosts
+  if [[ -f $ansible_config_file ]]; then
+    echo 'Adding logging to ansible config file'
+    sed -i".old" 's/#log_path = \/var\/log\/ansible.log/log_path = \/var\/log\/ansible.log/' $ansible_config_file
+  else
+    echo -e "${RED}Unable to find ansible config file to modify, moving on...${RESET}"
   fi
 }
 
-checkAnsibleInstalled()
+create_host_file()
 {
-  if $HOME/.pyenv/versions/${pythonVersion}/bin/ansible localhost -m ping > /dev/null; then
+  if [[ ! -f $ansible_hosts ]]; then
+    sudo touch $ansible_hosts
+    # Run playbooks locally
+    echo "localhost ansible_connection=local" | sudo tee $ansible_hosts
+  fi
+}
+
+check_ansible_installed()
+{
+  if $HOME/.pyenv/versions/${python_version}/bin/ansible localhost -m ping > /dev/null; then
     echo -e "${GREEN}Ansible was successfully installed!${RESET}"
   else
-    echo -e "${RED}There was an issue installing Ansible.${RESET}"
+    echo -e "${RED}There was an issue installing ansible.${RESET}"
   fi
 }
 
-createAnsibleWorkspace()
+create_ansible_workspace()
 {
-  if [[ ! -d $ansibleWorkspace ]]; then
-    echo -e "${BLUE}Creating Ansible workspace at $ansibleWorkspace ${RESET}"
-    mkdir -p $ansibleWorkspace
+  if [[ ! -d $ansible_workspace ]]; then
+    echo -e "${BLUE}Creating ansible workspace at $ansible_workspace ${RESET}"
+    mkdir -p $ansible_workspace
   else
     echo -e "${GREEN}Ansible workspace already created, moving on...${RESET}"
   fi
 }
 
-createGlobalRoles()
+create_global_roles()
 {
-  if [[ ! -d $globalRoles ]]; then
-    sudo mkdir $globalRoles
-    sudo chown -R root $ansibleDirectory
+  if [[ ! -d $global_roles ]]; then
+    echo -e "${BLUE}Creating global ansible roles directory${RESET}"
+    sudo mkdir $global_roles
+    sudo chown -R root $ansible_directory
     if [[ $os == 'ubuntu' ]]; then
-      sudo chgrp -R root $ansibleDirectory
+      sudo chgrp -R root $ansible_directory
     fi
   else
     echo -e "${GREEN}Global Ansible roles directory already created, moving on...${RESET}"
   fi
 }
 
-setupAnsibleSymlinks()
+setup_ansible_symlinks()
 {
-  ansibleBins=('ansible' 'ansible-connection' 'ansible-console' 'ansible-doc' 'ansible-galaxy' 'ansible-playbook' 'ansible-pull' 'ansible-vault')
+  ansible_bins=('ansible' 'ansible-connection' 'ansible-console' 'ansible-doc' 'ansible-galaxy' 'ansible-playbook' 'ansible-pull' 'ansible-vault')
   # If there's already an ansible in place, remove it
   if [[ -f /usr/local/bin/ansible ]]; then
     sudo rm -rf /usr/local/bin/ansible
   fi
 
-  for ((i=0; i<${#ansibleBins[*]}; i++)); do
-    sudo ln -s $HOME/.pyenv/versions/${pythonVersion}/bin/${ansibleBins[i]} /usr/local/bin/${ansibleBins[i]}
+  for ((i=0; i<${#ansible_bins[*]}; i++)); do
+    echo -e "${BLUE}Creating ${ansible_bins[i]} symlink${RESET}"
+    sudo ln -s $HOME/.pyenv/versions/${python_version}/bin/${ansible_bins[i]} /usr/local/bin/${ansible_bins[i]}
   done
 }
 
-installPyenv
-installPython
-getPip
-installAnsible
-createAnsibleDirectory
-getAnsibleConfigFile
-createHostFile
-checkAnsibleInstalled
-createAnsibleWorkspace
-createGlobalRoles
-setupAnsibleSymlinks
+create_log_file()
+{
+  echo -e "${BLUE}Creating log file at /var/log/ansible.log${RESET}"
+  sudo touch /var/log/ansible.log
+  sudo chmod 644 /var/log/ansible.log
+}
+
+install_pyenv
+install_python
+get_pip
+install_ansible
+create_ansible_directory
+get_ansible_config_file
+modify_ansible_config_file
+create_host_file
+check_ansible_installed
+create_ansible_workspace
+create_global_roles
+setup_ansible_symlinks
+create_log_file
