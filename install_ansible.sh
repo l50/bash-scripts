@@ -39,7 +39,7 @@ install_apt_deps()
 {
   echo -e "${BLUE}Making sure all apt dependencies are in place, please wait...${RESET}"
   sudo apt update
-  sudo apt install -y git build-essential libssl-dev libbz2-dev make zlib1g-dev \
+  sudo DEBIAN_FRONTEND=noninteractive apt install -y git build-essential libssl-dev libbz2-dev make zlib1g-dev \
     libreadline-dev libsqlite3-dev wget curl llvm libncurses5-dev libncursesw5-dev \
     tk-dev xz-utils
 }
