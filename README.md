@@ -9,5 +9,5 @@ Repo to hold useful bash scripts I've done over time
 ```
 wget -O - https://raw.githubusercontent.com/l50/bash-scripts/master/install_ansible.sh | bash
 ```
-- uninstall_ansible.sh - Removes ansible from your system (assuming you used the above install script)
+- ```uninstall_ansible.sh``` - Removes ansible from your system (assuming you used the above install script)
 
