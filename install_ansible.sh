@@ -127,7 +127,7 @@ create_ansible_directory()
 {
   if [[ ! -d $ansible_directory ]]; then
     sudo mkdir $ansible_directory
-    # This will not work on docker because $USER is not defined
+    # This will not work on docker by default because $USER is not defined - you need to define it as an ENV var
     sudo chown $USER $ansible_directory
   else
     echo -e "${GREEN}Ansible directory already created, moving on...${RESET}"
